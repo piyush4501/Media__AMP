@@ -1,3 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SeatLock — Movie & Event Booking</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0e; --bg-1:#111117; --bg-2:#191922; --bg-3:#22222d;
+  --line:#2a2a36; --line-soft:#1c1c26;
+  --text:#f4f4f6; --muted:#93939f; --muted-2:#5f5f6b;
+  --accent:#ff4d5e; --accent-2:#ff7a45; --gold:#ffbe3d;
+  --held:#e0972d; --booked:#4b4b57; --ok:#22c55e;
+  --radius:14px; --radius-lg:22px;
+  --font-display:'Bebas Neue', 'Inter', sans-serif;
+  --font-body:'Inter', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:#fff}
+a{color:inherit}
+button,select,input{font-family:inherit}
+button{-webkit-tap-highlight-color:transparent}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid rgba(255,77,94,.65);outline-offset:3px}
+::-webkit-scrollbar{height:8px;width:8px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:var(--muted-2)}
+
+/* ---------- layout shells ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+header.site{position:sticky;top:0;z-index:40;background:rgba(10,10,14,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.055);box-shadow:0 8px 30px rgba(0,0,0,.14)}
+.site-bar{display:flex;align-items:center;gap:18px;padding:14px 0}
+.brand{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;border:0;background:none;color:inherit;padding:0}
+.brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 6px 18px -6px rgba(255,77,94,.6)}
+.brand .name{font-family:var(--font-display);font-size:26px;letter-spacing:.5px;line-height:1}
+.brand .name b{color:var(--accent);font-weight:400}
+.city-pick{display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,var(--bg-2),#15151d);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .18s ease}
+.city-pick:hover{border-color:rgba(255,255,255,.16);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.city-pick:active{transform:scale(.985)}
+.city-pick select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:var(--text);font:inherit;font-weight:600;cursor:pointer;outline:none;padding:1px 20px 1px 0;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 4px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.city-pick select option{background:#17171f;color:var(--text)}
+.search-box{flex:1;max-width:420px;position:relative}
+.search-box input{width:100%;background:linear-gradient(180deg,var(--bg-2),#15151d);border:1px solid rgba(255,255,255,.07);border-radius:999px;padding:10px 16px 10px 38px;color:var(--text);font:inherit;font-size:14px;outline:none;transition:border-color .2s ease,box-shadow .2s ease,background .2s ease}
+.search-box input:hover{border-color:rgba(255,255,255,.13)}
+.search-box input:focus{border-color:rgba(255,77,94,.65);box-shadow:0 0 0 4px rgba(255,77,94,.08);background:var(--bg-2)}
+.search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.5;transition:opacity .2s}
+.search-box:focus-within svg{opacity:.8}
+.nav-links{display:flex;gap:4px;margin-left:auto}
+.nav-links button{background:none;border:1px solid transparent;color:var(--muted);font-size:14px;font-weight:600;padding:9px 14px;border-radius:999px;cursor:pointer;transition:color .2s ease,background .2s ease,border-color .2s ease,transform .16s ease}
+.nav-links button:active{transform:scale(.97)}
+.nav-links button:hover{color:var(--text);background:var(--bg-2)}
+.nav-links button.active{color:var(--text);background:var(--bg-3);border-color:rgba(255,255,255,.045);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.guest-pill{font-size:12px;color:var(--muted-2);border:1px solid var(--line);padding:6px 12px;border-radius:999px;white-space:nowrap}
+
+main{min-height:70vh}
+.view{animation:viewIn .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- home / hero ---------- */
+.hero{padding:46px 0 30px;position:relative;overflow:hidden}
+.hero h1{font-family:var(--font-display);font-size:clamp(38px,6vw,64px);line-height:.95;margin:0 0 10px;letter-spacing:.3px}
+.hero p{color:var(--muted);font-size:16px;max-width:520px;margin:0}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 16px}
+.section-head h2{font-family:var(--font-display);font-size:26px;letter-spacing:.4px;margin:0}
+.section-head span{color:var(--muted-2);font-size:13px}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.chip{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:color .2s ease,border-color .2s ease,background .2s ease,transform .16s ease,box-shadow .2s ease}
+.chip:hover{border-color:var(--muted-2);color:var(--text);transform:translateY(-1px)}
+.chip:active{transform:scale(.97)}
+.chip.active{background:var(--text);color:#0a0a0e;border-color:var(--text)}
+
+.movie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;padding-bottom:12px}
+.movie-card{border-radius:var(--radius-lg);overflow:hidden;background:var(--bg-1);border:1px solid var(--line-soft);cursor:pointer;transition:transform .28s cubic-bezier(.2,.75,.25,1),border-color .22s ease,box-shadow .28s ease;position:relative}
+.movie-card:active{transform:scale(.985)}
+.movie-card:hover{transform:translateY(-5px);border-color:var(--line)}
+.poster{height:270px;position:relative;display:flex;align-items:flex-end;padding:16px;color:#fff;overflow:hidden}
+.poster::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.75) 100%)}
+.poster .ptitle{position:relative;z-index:1;font-family:var(--font-display);font-size:26px;line-height:1;letter-spacing:.3px;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+.poster .format-tag{position:absolute;top:12px;right:12px;z-index:1;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px}
+.rating-badge{position:absolute;top:12px;left:12px;z-index:1;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;display:flex;align-items:center;gap:4px}
+.movie-meta{padding:13px 15px 16px;font-size:12.5px;color:var(--muted)}
+.movie-meta .mg{color:var(--text);font-weight:600;display:block;margin-bottom:4px;font-size:13.5px}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .big{font-size:44px;margin-bottom:10px}
+
+/* skeletons */
+.skel{background:linear-gradient(100deg,var(--bg-1) 30%,var(--bg-2) 50%,var(--bg-1) 70%);background-size:200% 100%;animation:shine 1.3s infinite}
+@keyframes shine{from{background-position:200% 0}to{background-position:-200% 0}}
+.skel-card{height:270px;border-radius:var(--radius-lg)}
+
+/* ---------- movie detail ---------- */
+.detail-banner{border-radius:var(--radius-lg);padding:34px;margin-top:22px;position:relative;overflow:hidden;color:#fff}
+.detail-banner::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% 20%,rgba(255,255,255,.18),transparent 55%)}
+.detail-banner .content{position:relative;z-index:1}
+.back-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:18px}
+.detail-banner h1{font-family:var(--font-display);font-size:clamp(34px,5vw,52px);margin:0 0 8px;letter-spacing:.3px}
+.meta-line{display:flex;gap:10px;flex-wrap:wrap;font-size:13.5px;font-weight:600;opacity:.92;margin-bottom:14px}
+.meta-line span{background:rgba(0,0,0,.28);padding:5px 11px;border-radius:999px}
+.detail-desc{max-width:560px;opacity:.92;font-size:14.5px;line-height:1.55;margin:0}
+
+.date-pills{display:flex;gap:10px;overflow-x:auto;padding:22px 0 6px}
+.date-pill{flex:0 0 auto;border:1px solid var(--line);background:var(--bg-1);border-radius:14px;padding:10px 16px;text-align:center;cursor:pointer;min-width:64px;transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease}
+.date-pill:hover{border-color:rgba(255,255,255,.16);transform:translateY(-1px)}
+.date-pill:active{transform:scale(.96)}
+.date-pill .d{font-size:19px;font-weight:800}
+.date-pill .m{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.date-pill.active{background:var(--accent);border-color:var(--accent)}
+.date-pill.active .m{color:rgba(255,255,255,.85)}
+
+.venue-block{margin:22px 0;border-top:1px solid var(--line-soft);padding-top:18px}
+.venue-block h3{font-size:15px;margin:0 0 10px}
+.venue-block .vsub{color:var(--muted-2);font-size:12.5px;margin-left:8px;font-weight:500}
+.show-pills{display:flex;gap:10px;flex-wrap:wrap}
+.show-pill{border:1px solid var(--line);background:linear-gradient(180deg,var(--bg-1),#101016);color:var(--text);padding:9px 15px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;transition:transform .18s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease,background .2s ease}
+.show-pill:hover{box-shadow:0 7px 18px rgba(0,0,0,.18);transform:translateY(-1px)}
+.show-pill:active{transform:scale(.97)}
+.show-pill:hover{border-color:var(--gold);color:var(--gold)}
+.show-pill .fmt{display:block;font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+
+/* ---------- seat map ---------- */
+.flow-topbar{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line-soft);position:sticky;top:63px;background:var(--bg);z-index:20}
+.flow-topbar .info b{display:block;font-size:15px}
+.flow-topbar .info span{font-size:12.5px;color:var(--muted)}
+.timer-pill{margin-left:auto;background:var(--bg-2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.timer-pill.low{border-color:var(--accent);color:var(--accent)}
+.timer-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.4s infinite}
+.timer-pill.low .timer-dot{background:var(--accent)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.screen-wrap{max-width:640px;margin:34px auto 8px;text-align:center}
+.screen-arc{width:100%;height:26px;border-radius:100% 100% 0 0/100% 100% 0 0;background:linear-gradient(180deg,rgba(255,190,61,.55),rgba(255,190,61,.05));box-shadow:0 14px 34px -12px rgba(255,190,61,.45)}
+.screen-label{color:var(--muted-2);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:10px}
+
+.seat-map{padding:22px 0 10px;overflow-x:auto}
+.seat-row{display:flex;align-items:center;justify-content:center;gap:9px;margin:7px 0}
+.row-tag{width:18px;font-size:11px;color:var(--muted-2);font-weight:700;text-align:center}
+.seat-gap{width:16px}
+.seat{width:30px;height:26px;border-radius:7px 7px 3px 3px;border:1.5px solid var(--line);background:transparent;color:var(--muted);font-size:9.5px;font-weight:700;cursor:pointer;transition:transform .18s cubic-bezier(.2,.8,.25,1),background .2s ease,border-color .2s ease,box-shadow .2s ease,color .2s ease;display:flex;align-items:center;justify-content:center;will-change:transform}
+.seat.recliner{width:36px;height:28px;border-radius:9px 9px 3px 3px}
+.seat.premium{border-color:#3a3a48}
+.seat:hover:not(:disabled){transform:translateY(-2px);border-color:var(--gold);box-shadow:0 5px 14px rgba(255,190,61,.12)}
+.seat:active:not(:disabled){transform:translateY(0) scale(.92)}
+.seat:disabled{cursor:not-allowed}
+.seat.selected{background:var(--gold);border-color:var(--gold);color:#1a1200;transform:translateY(-2px) scale(1.05);box-shadow:0 7px 18px -4px rgba(255,190,61,.48)}
+.seat.held{background:rgba(224,151,45,.18);border-color:var(--held);color:var(--held)}
+.seat.booked{background:rgba(75,75,87,.35);border-color:var(--booked);color:var(--muted-2)}
+
+.legend-row{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin:26px 0 6px;font-size:12.5px;color:var(--muted)}
+.legend-row .lg{display:flex;align-items:center;gap:7px}
+.legend-row .sw{width:16px;height:14px;border-radius:4px;border:1.5px solid var(--line)}
+.tier-price-row{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:6px 0 30px;font-size:12px;color:var(--muted-2)}
+.tier-price-row b{color:var(--text)}
+
+/* sticky checkout bar */
+.checkout-bar{position:sticky;bottom:0;background:var(--bg-1);border-top:1px solid var(--line);padding:14px 0;margin-top:10px}
+.checkout-bar .row{display:flex;align-items:center;gap:16px}
+.checkout-bar .amount{font-size:19px;font-weight:800}
+.checkout-bar .amount span{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+.btn{border:0;border-radius:12px;padding:13px 22px;background:linear-gradient(180deg,#ff5968,var(--accent));color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;transition:filter .2s ease,transform .16s ease,box-shadow .2s ease;box-shadow:0 7px 20px -9px rgba(255,77,94,.65)}
+.btn:hover:not(:disabled){filter:brightness(1.06);box-shadow:0 10px 24px -9px rgba(255,77,94,.72);transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(1px) scale(.985);box-shadow:0 4px 12px -8px rgba(255,77,94,.6)}
+.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.btn.ghost{background:linear-gradient(180deg,var(--bg-2),#15151c);border:1px solid var(--line);color:var(--text);box-shadow:none}
+.btn.ghost:hover:not(:disabled){border-color:rgba(255,255,255,.16);box-shadow:0 7px 18px rgba(0,0,0,.18)}
+.btn.block{width:100%}
+.btn.sm{padding:9px 16px;font-size:13px;border-radius:9px}
+
+/* ---------- food step ---------- */
+.food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:20px 0}
+.food-card{background:var(--bg-1);border:1px solid var(--line-soft);border-radius:var(--radius);padding:15px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.food-card .fname{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px}
+.veg-dot{width:11px;height:11px;border:1.5px solid var(--ok);border-radius:2px;display:inline-flex;align-items:center;justify-content:center}
+.veg-dot::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--ok)}
+.veg-dot.non::after{background:var(--accent)}
+.veg-dot.non{border-color:var(--accent)}
+.food-card .fprice{color:var(--muted);font-size:12.5px;margin-top:3px}
+.qty-stepper{display:flex;align-items:center;gap:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:999px;padding:5px 6px}
+.qty-stepper button{width:24px;height:24px;border-radius:50%;border:0;background:var(--bg-3);color:var(--text);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .16s ease,background .18s ease}
+.qty-stepper button:hover{background:var(--line);transform:scale(1.06)}
+.qty-stepper button:active{transform:scale(.9)}
+.qty-stepper span{min-width:16px;text-align:center;font-weight:700;font-size:13px}
+
+/* ---------- summary / payment ---------- */
+.pay-layout{display:grid;grid-template-columns:1.3fr .9fr;gap:26px;margin-top:24px;align-items:start}
+@media (max-width:820px){.pay-layout{grid-template-columns:1fr}}
+.card{background:var(--bg-1);border:1px solid var(--line-soft);border-radius:var(--radius-lg);padding:22px}
+.card h3{margin:0 0 14px;font-size:15.5px}
+.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.method{border:1.5px solid var(--line);background:linear-gradient(180deg,var(--bg-2),#15151c);border-radius:11px;padding:14px 10px;text-align:center;font-size:12.5px;font-weight:700;cursor:pointer;transition:transform .18s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.method:hover{border-color:rgba(255,255,255,.16);transform:translateY(-1px)}
+.method:active{transform:scale(.97)}
+.method.active{border-color:var(--accent);color:var(--accent);background:rgba(255,77,94,.08)}
+.coupon-row{display:flex;gap:8px;margin-top:6px}
+.coupon-row input{flex:1;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--text);font:inherit;outline:none;text-transform:uppercase}
+.coupon-row input:focus{border-color:var(--accent)}
+.coupon-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.coupon-tag{font-size:11.5px;border:1px dashed var(--line);color:var(--muted);padding:5px 10px;border-radius:999px;cursor:pointer;transition:color .18s ease,border-color .18s ease,background .18s ease,transform .16s ease}
+.coupon-tag:hover{color:var(--text);border-color:var(--muted-2);background:var(--bg-2)}
+.coupon-tag:active{transform:scale(.96)}
+.coupon-applied{margin-top:10px;font-size:12.5px;color:var(--ok);display:flex;justify-content:space-between;align-items:center;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:9px 12px;border-radius:9px}
+.summary-line{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);margin:8px 0}
+.summary-line.total{color:var(--text);font-weight:800;font-size:16px;border-top:1px solid var(--line-soft);padding-top:12px;margin-top:12px}
+.summary-line.disc{color:var(--ok)}
+.seat-tags{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px}
+.seat-tags span{background:var(--bg-2);border:1px solid var(--line);font-size:12px;font-weight:700;padding:4px 9px;border-radius:7px}
+.demo-toggle{margin-top:16px;font-size:12px;color:var(--muted-2);display:flex;align-items:center;gap:8px}
+
+/* ---------- ticket ---------- */
+.ticket{max-width:520px;margin:30px auto;background:var(--bg-1);border:1px solid var(--line-soft);border-radius:var(--radius-lg);overflow:hidden}
+.ticket-top{padding:26px;color:#fff;position:relative}
+.ticket-top .status{font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.85}
+.ticket-top h2{font-family:var(--font-display);font-size:30px;margin:6px 0 4px}
+.ticket-top .sub{font-size:13px;opacity:.9}
+.ticket-perf{position:relative;height:0}
+.ticket-perf::before{content:"";position:absolute;left:0;right:0;top:-1px;border-top:2px dashed var(--line);}
+.ticket-perf .hole{position:absolute;top:-11px;width:22px;height:22px;border-radius:50%;background:var(--bg)}
+.ticket-perf .hole.l{left:-11px}.ticket-perf .hole.r{right:-11px}
+.ticket-body{padding:22px 26px 26px}
+.tk-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.tk-grid .lbl{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.tk-grid .val{font-size:14px;font-weight:700}
+.barcode{display:flex;align-items:flex-end;gap:2px;height:46px;justify-content:center;margin:16px 0 6px}
+.barcode i{display:block;width:3px;background:var(--text);opacity:.85}
+.ticket-id{text-align:center;font-size:12px;letter-spacing:3px;color:var(--muted);margin-bottom:6px}
+.ticket-actions{display:flex;gap:10px;margin-top:18px}
+
+/* ---------- my bookings ---------- */
+.booking-card{background:var(--bg-1);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px;display:flex;gap:16px;margin-bottom:14px;align-items:center}
+.booking-poster{width:56px;height:76px;border-radius:9px;flex:0 0 auto}
+.booking-info{flex:1;min-width:0}
+.booking-info h4{margin:0 0 4px;font-size:15px}
+.booking-info .sub{color:var(--muted);font-size:12.5px}
+.status-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.3px}
+.status-badge.CONFIRMED{background:rgba(34,197,94,.15);color:var(--ok)}
+.status-badge.CANCELLED{background:rgba(75,75,87,.3);color:var(--muted)}
+.status-badge.PAYMENT_FAILED{background:rgba(255,77,94,.15);color:var(--accent)}
+.booking-right{text-align:right;flex:0 0 auto}
+.booking-right .amt{font-weight:800;font-size:15px;margin-bottom:8px}
+
+/* ---------- toast / print ---------- */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,120%) scale(.96);opacity:0;background:rgba(34,34,45,.94);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);padding:13px 20px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:100;transition:transform .3s cubic-bezier(.2,.8,.3,1),opacity .22s ease;box-shadow:0 14px 36px -8px rgba(0,0,0,.55)}
+.toast.show{transform:translate(-50%,0) scale(1);opacity:1}
+.toast.err{border-color:var(--accent);color:#ffd7da}
+
+footer.site{border-top:1px solid var(--line-soft);margin-top:50px;padding:26px 0;color:var(--muted-2);font-size:12.5px;text-align:center}
+
+@media print{
+  header.site,.flow-topbar,.ticket-actions,footer.site{display:none!important}
+  body{background:#fff;color:#000}
+  .ticket{border-color:#000}
+}
+@media (max-width:640px){
+  .search-box{display:none}
+  .site-bar{flex-wrap:wrap}
+  .nav-links{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap site-bar">
+    <button class="brand" onclick="goHome()" title="Go to home">
+      <span class="mark">🎬</span>
+      <span class="name">Seat<b>Lock</b></span>
+    </button>
+    <div class="city-pick">
+      📍 <select id="citySelect" onchange="onCityChange(this.value)"><option>Loading…</option></select>
+    </div>
+    <div class="search-box">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" placeholder="Search movies…" oninput="onSearch(this.value)">
+    </div>
+    <div class="nav-links">
+      <button id="navHome" class="active" onclick="goHome()">Now Showing</button>
+      <button id="navBookings" onclick="goBookings()">My Bookings</button>
+    </div>
+    <div class="guest-pill" id="guestPill"></div>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<footer class="site">SeatLock — a concurrency-safe seat reservation demo. Payments are simulated; no real money moves.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================== state ============================== */
+const userId = localStorage.getItem("seatlock-user") || (() => {
+  const id = "guest-" + Math.random().toString(36).slice(2, 7);
+  localStorage.setItem("seatlock-user", id);
+  return id;
+})();
+document.getElementById("guestPill").textContent = "👤 " + userId;
+
+const state = {
+  city: localStorage.getItem("seatlock-city") || "",
+  search: "",
+  movies: [],
+  cities: [],
+  currentMovie: null,
+  selectedDate: null,
+  currentShow: null,
+  seats: [],
+  selected: new Set(),
+  holdExpiresAt: null,
+  timer: null,
+  foods: [],
+  cart: new Map(),      // foodId -> qty
+  coupon: null,         // {code, discount, description}
+  paymentMethod: "CARD",
+  simulateFailure: false,
+  lastBooking: null
+};
+
+/* ============================== helpers ============================== */
+async function api(url, opts) {
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opts });
+  const json = await res.json();
+  if (!res.ok || json.success === false) throw json;
+  return json;
+}
+function toast(msg, isErr) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove("show"), 2800);
+}
+function money(n) { return "₹" + Number(n).toLocaleString("en-IN"); }
+function setActiveNav(id) {
+  document.querySelectorAll(".nav-links button").forEach(b => b.classList.remove("active"));
+  const el = document.getElementById(id);
+  if (el) el.classList.add("active");
+}
+function gradientCss(g) { return `linear-gradient(${g})`; }
+function fmtDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return { day: d.getDate(), mon: d.toLocaleString("en-US", { month: "short" }), wk: d.toLocaleString("en-US", { weekday: "short" }) };
+}
+function fmtTime12(t) {
+  const [h, m] = t.split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM";
+  const hh = ((h + 11) % 12) + 1;
+  return `${hh}:${String(m).padStart(2, "0")} ${ap}`;
+}
+function clearHoldTimer() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
+
+/* ============================== boot ============================== */
+async function boot() {
+  try {
+    const [cities, movies] = await Promise.all([api("/api/cities"), api("/api/movies")]);
+    state.cities = cities.data;
+    if (!state.city || !state.cities.includes(state.city)) state.city = state.cities[0] || "";
+    const sel = document.getElementById("citySelect");
+    sel.innerHTML = state.cities.map(c => `<option value="${c}" ${c === state.city ? "selected" : ""}>${c}</option>`).join("");
+    await goHome();
+  } catch (e) {
+    document.getElementById("app").innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Couldn't reach the server. Is it running?</div>`;
+  }
+}
+function onCityChange(city) {
+  state.city = city;
+  localStorage.setItem("seatlock-city", city);
+  goHome();
+}
+let searchDebounce;
+function onSearch(v) {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => { state.search = v; renderHome(); }, 250);
+}
+
+/* ============================== HOME ============================== */
+async function goHome() {
+  clearHoldTimer();
+  setActiveNav("navHome");
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="view">
+      <section class="hero">
+        <h1>Book the best<br>seat in the house.</h1>
+        <p>Real-time seat locking, zero double-bookings — pick a film playing near you and reserve in seconds.</p>
+      </section>
+      <div class="section-head"><h2>Now Showing in ${state.city || "your city"}</h2><span id="movieCount"></span></div>
+      <div class="movie-grid" id="movieGrid">${Array.from({length:4}).map(()=>'<div class="skel skel-card"></div>').join("")}</div>
+    </div>`;
+  try {
+    const q = new URLSearchParams();
+    if (state.city) q.set("city", state.city);
+    if (state.search) q.set("search", state.search);
+    const res = await api("/api/movies?" + q.toString());
+    state.movies = res.data;
+    renderHome();
+  } catch (e) {
+    document.getElementById("movieGrid").innerHTML = `<div class="empty-state">Couldn't load movies right now.</div>`;
+  }
+}
+function renderHome() {
+  const grid = document.getElementById("movieGrid");
+  if (!grid) return;
+  const list = state.movies.filter(m => !state.search || m.title.toLowerCase().includes(state.search.toLowerCase()));
+  document.getElementById("movieCount").textContent = list.length ? `${list.length} film${list.length > 1 ? "s" : ""}` : "";
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="big">🍿</div>No films match that search.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(m => `
+    <div class="movie-card" onclick="openMovie('${encodeURIComponent(m.title)}')">
+      <div class="poster" style="background:${gradientCss(m.poster_gradient)}">
+        <span class="rating-badge">★ ${m.rating.toFixed(1)}</span>
+        <span class="format-tag">${m.shows[0]?.format || "2D"}</span>
+        <div class="ptitle">${m.title}</div>
+      </div>
+      <div class="movie-meta">
+        <span class="mg">${m.genre}</span>
+        ${m.language} · ${m.duration_mins} min · ${m.censor_rating}
+      </div>
+    </div>`).join("");
+}
+
+/* ============================== MOVIE DETAIL ============================== */
+async function openMovie(encodedTitle) {
+  const title = decodeURIComponent(encodedTitle);
+  const movie = state.movies.find(m => m.title === title) || (await api("/api/movies?search=" + encodeURIComponent(title))).data[0];
+  if (!movie) return toast("Movie not found", true);
+  state.currentMovie = movie;
+  const dates = [...new Set(movie.shows.map(s => s.show_date))].sort();
+  state.selectedDate = dates[0];
+  renderMovieDetail();
+}
+function renderMovieDetail() {
+  setActiveNav("");
+  const m = state.currentMovie;
+  const dates = [...new Set(m.shows.map(s => s.show_date))].sort();
+  const showsForDate = m.shows.filter(s => s.show_date === state.selectedDate);
+  const byVenue = {};
+  showsForDate.forEach(s => (byVenue[s.venue + "|" + s.city] ??= []).push(s));
+
+  document.getElementById("app").innerHTML = `
+    <div class="view">
+      <div class="detail-banner" style="background:${gradientCss(m.poster_gradient)}">
+        <div class="content">
+          <button class="back-btn" onclick="goHome()">← Back</button>
+          <h1>${m.title}</h1>
+          <div class="meta-line">
+            <span>${m.censor_rating}</span><span>${m.genre}</span><span>${m.language}</span>
+            <span>${m.duration_mins} min</span><span>★ ${m.rating.toFixed(1)}</span>
+          </div>
+          <p class="detail-desc">${m.description}</p>
+        </div>
+      </div>
+
+      <div class="date-pills">
+        ${dates.map(d => {
+          const f = fmtDate(d);
+          return `<div class="date-pill ${d === state.selectedDate ? "active" : ""}" onclick="selectDate('${d}')">
+            <div class="d">${f.day}</div><div class="m">${f.mon} · ${f.wk}</div>
+          </div>`;
+        }).join("")}
+      </div>
+
+      <div id="venueList">
+        ${Object.entries(byVenue).length ? Object.entries(byVenue).map(([key, shows]) => {
+          const [venue, city] = key.split("|");
+          return `<div class="venue-block">
+            <h3>${venue} <span class="vsub">${city}</span></h3>
+            <div class="show-pills">
+              ${shows.map(s => `<button class="show-pill" onclick="selectShow('${s.id}')">${fmtTime12(s.show_time)}<span class="fmt">${s.format}</span></button>`).join("")}
+            </div>
+          </div>`;
+        }).join("") : `<div class="empty-state">No shows on this date. Try another date.</div>`}
+      </div>
+    </div>`;
+}
+function selectDate(d) { state.selectedDate = d; renderMovieDetail(); }
+
+/* ============================== SEAT MAP ============================== */
+async function selectShow(showId) {
+  const show = state.currentMovie.shows.find(s => s.id === showId);
+  state.currentShow = { ...show, title: state.currentMovie.title };
+  state.selected = new Set();
+  state.holdExpiresAt = null;
+  clearHoldTimer();
+  await loadSeatsAndRender();
+}
+async function loadSeatsAndRender() {
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="view"><div class="empty-state">Loading seat map…</div></div>`;
+  try {
+    const res = await api(`/api/shows/${state.currentShow.id}/seats`);
+    state.seats = res.data;
+    renderSeatMap();
+  } catch (e) {
+    app.innerHTML = `<div class="empty-state">Couldn't load seats for this show.</div>`;
+  }
+}
+function seatDisplayClass(s) {
+  if (state.selected.has(s.id)) return "selected";
+  return s.status.toLowerCase(); // available | held | booked
+}
+function tierLabel(t) { return t === "RECLINER" ? "Recliner" : t === "PREMIUM" ? "Premium" : "Regular"; }
+function renderSeatMap() {
+  setActiveNav("");
+  const sh = state.currentShow;
+  const rows = {};
+  state.seats.forEach(s => (rows[s.row_name] ??= []).push(s));
+  const tiers = [...new Map(state.seats.map(s => [s.seat_type, s.price])).entries()];
+  const selectedArr = [...state.selected];
+  const total = selectedArr.reduce((sum, id) => sum + (state.seats.find(s => s.id === id)?.price || 0), 0);
+
+  document.getElementById("app").innerHTML = `
+    <div class="view">
+      <div class="flow-topbar">
+        <button class="back-btn" style="background:var(--bg-2);border-color:var(--line);color:var(--text)" onclick="renderMovieDetail()">← Back</button>
+        <div class="info"><b>${sh.title}</b><span>${sh.venue} · ${sh.city} · ${fmtTime12(sh.show_time)} · ${sh.format}</span></div>
+        <div id="timerSlot"></div>
+      </div>
+
+      <div class="screen-wrap">
+        <div class="screen-arc"></div>
+        <div class="screen-label">All eyes this way</div>
+      </div>
+
+      <div class="seat-map">
+        ${Object.entries(rows).map(([row, seats]) => `
+          <div class="seat-row">
+            <span class="row-tag">${row}</span>
+            ${seats.slice(0, 5).map(seatBtn).join("")}
+            <span class="seat-gap"></span>
+            ${seats.slice(5).map(seatBtn).join("")}
+            <span class="row-tag">${row}</span>
+          </div>`).join("")}
+      </div>
+
+      <div class="legend-row">
+        <div class="lg"><span class="sw" style="background:transparent"></span>Available</div>
+        <div class="lg"><span class="sw" style="background:var(--gold);border-color:var(--gold)"></span>Selected</div>
+        <div class="lg"><span class="sw" style="background:rgba(224,151,45,.3);border-color:var(--held)"></span>Reserved</div>
+        <div class="lg"><span class="sw" style="background:rgba(75,75,87,.5);border-color:var(--booked)"></span>Sold</div>
+      </div>
+      <div class="tier-price-row">
+        ${tiers.map(([t, p]) => `<span>${tierLabel(t)} — <b>${money(p)}</b></span>`).join("")}
+      </div>
+
+      <div class="checkout-bar">
+        <div class="wrap row" style="padding:0">
+          <div class="amount">${selectedArr.length ? money(total) : "—"}<span>${selectedArr.length} seat${selectedArr.length === 1 ? "" : "s"} selected</span></div>
+          <button class="btn" style="margin-left:auto" id="continueBtn" ${selectedArr.length ? "" : "disabled"} onclick="confirmHold()">
+            ${state.holdExpiresAt ? "Continue" : "Reserve seats"}
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  if (state.holdExpiresAt) startHoldTimer();
+}
+function seatBtn(s) {
+  const cls = seatDisplayClass(s);
+  const disabled = s.status !== "AVAILABLE" && !state.selected.has(s.id);
+  const tierCls = s.seat_type === "RECLINER" ? "recliner" : s.seat_type === "PREMIUM" ? "premium" : "";
+  return `<button class="seat ${tierCls} ${cls}" ${disabled ? "disabled" : ""} onclick="toggleSeat('${s.id}')" title="${s.id} · ${tierLabel(s.seat_type)} · ${money(s.price)}">${s.seat_number}</button>`;
+}
+function toggleSeat(id) {
+  if (state.holdExpiresAt) return; // locked in once reserved
+  if (state.selected.has(id)) state.selected.delete(id);
+  else {
+    if (state.selected.size >= 10) return toast("You can select up to 10 seats");
+    state.selected.add(id);
+  }
+  renderSeatMap();
+}
+async function confirmHold() {
+  if (state.holdExpiresAt) return goToFood();
+  try {
+    const res = await api(`/api/shows/${state.currentShow.id}/hold-seats`, {
+      method: "POST", body: JSON.stringify({ userId, seatIds: [...state.selected] })
+    });
+    state.holdExpiresAt = res.data.expiresAt;
+    toast("Seats reserved for 10 minutes");
+    renderSeatMap();
+  } catch (e) {
+    toast(e.message || "Couldn't reserve those seats", true);
+    await loadSeatsAndRender();
+  }
+}
+function startHoldTimer() {
+  clearHoldTimer();
+  const tick = () => {
+    const slot = document.getElementById("timerSlot");
+    if (!slot) return clearHoldTimer();
+    const ms = new Date(state.holdExpiresAt) - Date.now();
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    const low = sec <= 90;
+    slot.innerHTML = `<div class="timer-pill ${low ? "low" : ""}"><span class="timer-dot"></span>${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")} left</div>`;
+    if (sec <= 0) {
+      clearHoldTimer();
+      toast("Your reservation expired", true);
+      state.holdExpiresAt = null; state.selected = new Set();
+      loadSeatsAndRender();
+    }
+  };
+  tick();
+  state.timer = setInterval(tick, 1000);
+}
+
+/* ============================== FOOD & BEVERAGES ============================== */
+async function goToFood() {
+  if (!state.foods.length) {
+    try { state.foods = (await api("/api/foods")).data; } catch (e) { state.foods = []; }
+  }
+  renderFood();
+}
+function renderFood() {
+  const grouped = {};
+  state.foods.forEach(f => (grouped[f.category] ??= []).push(f));
+  const foodTotal = [...state.cart.entries()].reduce((sum, [id, qty]) => sum + qty * (state.foods.find(f => f.id === id)?.price || 0), 0);
+  const seatTotal = [...state.selected].reduce((sum, id) => sum + (state.seats.find(s => s.id === id)?.price || 0), 0);
+
+  document.getElementById("app").innerHTML = `
+    <div class="view">
+      <div class="flow-topbar">
+        <button class="back-btn" style="background:var(--bg-2);border-color:var(--line);color:var(--text)" onclick="renderSeatMap()">← Seats</button>
+        <div class="info"><b>Snacks & drinks</b><span>Optional — skip if you're just here for the movie</span></div>
+        <div id="timerSlot"></div>
+      </div>
+
+      ${Object.entries(grouped).map(([cat, items]) => `
+        <div class="section-head" style="margin:26px 0 10px"><h2 style="font-size:19px">${cat}</h2></div>
+        <div class="food-grid">
+          ${items.map(f => `
+            <div class="food-card">
+              <div>
+                <div class="fname"><span class="veg-dot ${f.veg ? "" : "non"}"></span>${f.name}</div>
+                <div class="fprice">${money(f.price)}</div>
+              </div>
+              <div class="qty-stepper">
+                <button onclick="changeQty('${f.id}',-1)">−</button>
+                <span id="qty-${f.id}">${state.cart.get(f.id) || 0}</span>
+                <button onclick="changeQty('${f.id}',1)">+</button>
+              </div>
+            </div>`).join("")}
+        </div>`).join("")}
+
+      <div class="checkout-bar">
+        <div class="wrap row" style="padding:0">
+          <div class="amount">${money(seatTotal + foodTotal)}<span>Seats ${money(seatTotal)} + food ${money(foodTotal)}</span></div>
+          <button class="btn" style="margin-left:auto" onclick="goToPayment()">Continue to payment</button>
+        </div>
+      </div>
+    </div>`;
+  if (state.holdExpiresAt) startHoldTimer();
+}
+function changeQty(id, delta) {
+  const cur = state.cart.get(id) || 0;
+  const next = Math.max(0, Math.min(9, cur + delta));
+  if (next === 0) state.cart.delete(id); else state.cart.set(id, next);
+  document.getElementById("qty-" + id).textContent = next;
+  renderFood();
+}
+
+/* ============================== PAYMENT ============================== */
+const CONVENIENCE_FEE = 60;
+function goToPayment() { state.coupon = null; renderPayment(); }
+function renderPayment() {
+  const seatTotal = [...state.selected].reduce((sum, id) => sum + (state.seats.find(s => s.id === id)?.price || 0), 0);
+  const foodTotal = [...state.cart.entries()].reduce((sum, [id, qty]) => sum + qty * (state.foods.find(f => f.id === id)?.price || 0), 0);
+  const preDiscount = seatTotal + foodTotal + CONVENIENCE_FEE;
+  const discount = state.coupon ? state.coupon.discount : 0;
+  const total = Math.max(0, preDiscount - discount);
+  const sh = state.currentShow;
+
+  document.getElementById("app").innerHTML = `
+    <div class="view">
+      <div class="flow-topbar">
+        <button class="back-btn" style="background:var(--bg-2);border-color:var(--line);color:var(--text)" onclick="renderFood()">← Snacks</button>
+        <div class="info"><b>Checkout</b><span>${sh.title} · ${fmtTime12(sh.show_time)}</span></div>
+        <div id="timerSlot"></div>
+      </div>
+
+      <div class="pay-layout">
+        <div>
+          <div class="card">
+            <h3>Payment method</h3>
+            <div class="method-grid">
+              ${["CARD", "UPI", "NETBANKING"].map(m => `<div class="method ${state.paymentMethod === m ? "active" : ""}" onclick="setMethod('${m}')">${m === "CARD" ? "💳 Card" : m === "UPI" ? "📱 UPI" : "🏦 Netbanking"}</div>`).join("")}
+            </div>
+            <p style="color:var(--muted-2);font-size:12px;margin:14px 0 0">This is a mock gateway for demo purposes — no card or bank details are collected.</p>
+            <div class="demo-toggle">
+              <input type="checkbox" id="simFail" ${state.simulateFailure ? "checked" : ""} onchange="state.simulateFailure=this.checked">
+              <label for="simFail">Simulate a failed payment (to test the failure flow)</label>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px">
+            <h3>Have a coupon?</h3>
+            <div class="coupon-row">
+              <input id="couponInput" placeholder="ENTER CODE" maxlength="20">
+              <button class="btn ghost sm" onclick="applyCoupon()">Apply</button>
+            </div>
+            <div class="coupon-list">
+              <span class="coupon-tag" onclick="fillCoupon('FIRST50')">FIRST50</span>
+              <span class="coupon-tag" onclick="fillCoupon('SEAT20')">SEAT20</span>
+              <span class="coupon-tag" onclick="fillCoupon('WEEKEND10')">WEEKEND10</span>
+            </div>
+            <div id="couponMsg">${state.coupon ? `<div class="coupon-applied"><span>🎟️ ${state.coupon.code} applied — you saved ${money(state.coupon.discount)}</span><span style="cursor:pointer" onclick="removeCoupon()">✕</span></div>` : ""}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Order summary</h3>
+          <div class="seat-tags">${[...state.selected].map(id => `<span>${id}</span>`).join("")}</div>
+          <div class="summary-line"><span>Seats (${state.selected.size})</span><span>${money(seatTotal)}</span></div>
+          ${foodTotal ? `<div class="summary-line"><span>Food & beverages</span><span>${money(foodTotal)}</span></div>` : ""}
+          <div class="summary-line"><span>Convenience fee</span><span>${money(CONVENIENCE_FEE)}</span></div>
+          ${discount ? `<div class="summary-line disc"><span>Coupon discount</span><span>−${money(discount)}</span></div>` : ""}
+          <div class="summary-line total"><span>Total</span><span>${money(total)}</span></div>
+          <button class="btn block" style="margin-top:16px" onclick="pay()">Pay ${money(total)}</button>
+        </div>
+      </div>
+    </div>`;
+  if (state.holdExpiresAt) startHoldTimer();
+}
+function setMethod(m) { state.paymentMethod = m; renderPayment(); }
+function fillCoupon(code) { document.getElementById("couponInput").value = code; applyCoupon(); }
+async function applyCoupon() {
+  const code = document.getElementById("couponInput").value.trim();
+  if (!code) return;
+  const seatTotal = [...state.selected].reduce((sum, id) => sum + (state.seats.find(s => s.id === id)?.price || 0), 0);
+  const foodTotal = [...state.cart.entries()].reduce((sum, [id, qty]) => sum + qty * (state.foods.find(f => f.id === id)?.price || 0), 0);
+  const amount = seatTotal + foodTotal + CONVENIENCE_FEE;
+  try {
+    const res = await api("/api/coupons/apply", { method: "POST", body: JSON.stringify({ code, amount }) });
+    state.coupon = res.data;
+    toast("Coupon applied!");
+    renderPayment();
+  } catch (e) {
+    toast(e.message || "Invalid coupon", true);
+  }
+}
 function removeCoupon() { state.coupon = null; renderPayment(); }
 
 async function pay() {
@@ -126,3 +872,11 @@ async function cancelBooking(id) {
     toast(`Cancelled — ${res.data.refundPercent}% refund (${money(res.data.refundAmount)})`);
     goBookings();
   } catch (e) {
+    toast(e.message || "Couldn't cancel this booking", true);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
